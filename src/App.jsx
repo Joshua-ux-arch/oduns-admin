@@ -135,8 +135,15 @@ export default function App() {
     setUploading(true); setUploadPct(0);
     xhr.upload.onprogress = e => { if(e.lengthComputable) setUploadPct(Math.round(e.loaded/e.total*100)); };
     xhr.onload = () => {
-      if (xhr.status === 200) { const r = JSON.parse(xhr.responseText); onDone(r.secure_url); toast_("Photo uploaded!"); }
-      else toast_("Upload failed — check Cloudinary preset", "err");
+      if (xhr.status === 200) {
+        const r = JSON.parse(xhr.responseText);
+        // Add version param to bust any cache and force image to display immediately
+        const url = r.secure_url.replace("/upload/", "/upload/f_auto,q_auto/");
+        onDone(url);
+        toast_("Photo uploaded! ✓");
+      } else {
+        toast_("Upload failed — check Cloudinary preset", "err");
+      }
       setUploading(false); setUploadPct(0);
     };
     xhr.onerror = () => { toast_("Upload failed", "err"); setUploading(false); };
@@ -182,7 +189,9 @@ export default function App() {
       <label style={S.lbl}>Food Photo</label>
       <div style={S.photoRow}>
         {item.img
-          ? <img src={item.img} alt="preview" style={S.photoPreview}/>
+          ? <img src={item.img} alt="preview" style={S.photoPreview}
+              onError={e=>{e.target.onerror=null; e.target.src="";e.target.style.display="none";e.target.nextSibling&&(e.target.nextSibling.style.display="flex");}}
+            />
           : <div style={S.photoEmpty}>📷<br/>No photo</div>
         }
         <div style={S.photoActions}>
@@ -253,22 +262,19 @@ export default function App() {
             <div style={S.logoSub}>Menu Admin</div>
           </div>
         </div>
-        {/* Desktop nav */}
-        <div style={S.hRight}>
-          <span style={S.hUser}>👤 {user.email}</span>
+        <div className="admin-hright">
+          <span style={{fontSize:"12px",color:"rgba(240,240,240,0.4)"}}>👤 {user.email}</span>
           <button style={S.logoutBtn} onClick={()=>signOut(auth)}>Sign Out</button>
         </div>
-        {/* Mobile hamburger */}
-        <button style={S.burger} onClick={()=>setMobileMenu(!mobileMenu)}>
+        <button className="admin-burger" onClick={()=>setMobileMenu(!mobileMenu)}>
           {mobileMenu ? "✕" : "☰"}
         </button>
       </header>
 
-      {/* Mobile dropdown menu */}
       {mobileMenu && (
-        <div style={S.mobileNav}>
-          <span style={{fontSize:"12px",color:"rgba(240,240,240,0.4)",padding:"12px 16px",display:"block"}}>{user.email}</span>
-          <button style={S.mobileNavBtn} onClick={()=>{signOut(auth);setMobileMenu(false);}}>Sign Out</button>
+        <div className="mobile-dropdown">
+          <span>{user.email}</span>
+          <button onClick={()=>{signOut(auth);setMobileMenu(false);}}>Sign Out</button>
         </div>
       )}
 
@@ -279,7 +285,7 @@ export default function App() {
       ) : (<>
 
         {/* ── STATS ── */}
-        <div style={S.statsRow}>
+        <div className="stats-grid">
           {[
             {label:"Total Items",  val:totalItems,             color:"#E8520A"},
             {label:"Available",    val:totalItems-unavailCount,color:"#0ba34f"},
@@ -294,7 +300,7 @@ export default function App() {
         </div>
 
         {/* ── TOOLBAR ── */}
-        <div style={S.toolbar}>
+        <div style={S.toolbar} className="toolbar-wrap">
           <input style={S.searchInp} placeholder="🔍 Search items..." value={search} onChange={e=>setSearch(e.target.value)} />
           <div style={S.filterRow}>
             {["all","available","unavailable"].map(f=>(
@@ -307,7 +313,7 @@ export default function App() {
         </div>
 
         {/* ── CAT TABS ── */}
-        <div style={S.catScroll}>
+        <div style={S.catScroll} className="cat-scroll">
           <div style={S.catTabs}>
             {Object.entries(menu).map(([k,cat])=>(
               <button key={k} style={{...S.catTab,...(activeTab===k?S.catTabOn:{})}} onClick={()=>setActiveTab(k)}>
@@ -402,7 +408,7 @@ export default function App() {
           <div style={S.modal}>
             <h3 style={S.modalTitle}>✏️ Edit Item</h3>
             <PhotoField item={editItem} setItem={setEditItem} fileRef={editFileRef}/>
-            <div style={S.twoCol}>
+            <div className="two-col">
               <div style={S.field}>
                 <label style={S.lbl}>Item Name *</label>
                 <input style={S.inp} value={editItem.name} onChange={e=>setEditItem({...editItem,name:e.target.value})}/>
@@ -441,7 +447,7 @@ export default function App() {
           <div style={S.modal}>
             <h3 style={S.modalTitle}>+ Add to {menu[addingTo]?.label}</h3>
             <PhotoField item={newItem} setItem={setNewItem} fileRef={addFileRef}/>
-            <div style={S.twoCol}>
+            <div className="two-col">
               <div style={S.field}>
                 <label style={S.lbl}>Item Name *</label>
                 <input style={S.inp} placeholder="e.g. Jollof Spaghetti" value={newItem.name} onChange={e=>setNewItem({...newItem,name:e.target.value})}/>
@@ -539,7 +545,7 @@ const S = {
   thumbEmpty:    {width:"52px",height:"44px",background:"rgba(255,255,255,0.04)",borderRadius:"6px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px"},
   mobileCard:    {padding:"16px",borderBottom:"1px solid rgba(255,255,255,0.06)"},
   mobileCardTop: {display:"flex",gap:"12px",marginBottom:"8px"},
-  mobileThumb:   {width:"64px",height:"60px",objectFit:"cover",borderRadius:"6px",flexShrink:0},
+  mobileThumb:   {width:"64px",height:"60px",objectFit:"cover",borderRadius:"6px",flexShrink:0,display:"block"},
   mobileThumbEmpty:{width:"64px",height:"60px",background:"rgba(255,255,255,0.04)",borderRadius:"6px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",flexShrink:0},
   mobileCardActions:{display:"flex",gap:"8px",marginTop:"10px",flexWrap:"wrap"},
   unavailPill:   {background:"rgba(229,62,62,0.12)",color:"#fc8181",fontSize:"10px",padding:"2px 8px",borderRadius:"10px",fontWeight:600},
@@ -551,7 +557,7 @@ const S = {
   delBtn:        {background:"rgba(229,62,62,0.08)",border:"1px solid rgba(229,62,62,0.2)",color:"#fc8181",padding:"6px 10px",fontSize:"13px",cursor:"pointer",borderRadius:"6px"},
   addBtn:        {width:"100%",background:"rgba(232,82,10,0.07)",border:"none",borderTop:"1px dashed rgba(232,82,10,0.3)",color:"#E8520A",padding:"16px",fontSize:"13px",fontWeight:600,cursor:"pointer"},
   backdrop:      {position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px",overflowY:"auto"},
-  modal:         {background:"#1a1a1a",border:"1px solid rgba(255,255,255,0.1)",padding:"28px",width:"100%",maxWidth:"520px",borderRadius:"8px",marginTop:"20px"},
+  modal:         {background:"#1a1a1a",border:"1px solid rgba(255,255,255,0.1)",padding:"28px",width:"100%",maxWidth:"520px",borderRadius:"8px",marginTop:"20px",className:"modal-inner"},
   modalTitle:    {fontFamily:"Georgia,serif",fontSize:"20px",fontWeight:700,color:"#f0f0f0",marginBottom:"20px"},
   modalFoot:     {display:"flex",gap:"10px",marginTop:"24px"},
   twoCol:        {display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"},
@@ -559,7 +565,7 @@ const S = {
   saveBtn:       {flex:1,background:"#E8520A",border:"none",color:"#fff",padding:"11px",fontSize:"13px",fontWeight:700,cursor:"pointer",borderRadius:"6px"},
   radioLbl:      {fontSize:"14px",color:"rgba(240,240,240,0.65)",display:"flex",alignItems:"center",gap:"8px",cursor:"pointer"},
   photoRow:      {display:"flex",alignItems:"center",gap:"14px"},
-  photoPreview:  {width:"76px",height:"68px",objectFit:"cover",borderRadius:"8px",border:"1px solid rgba(255,255,255,0.1)"},
+  photoPreview:  {width:"76px",height:"68px",objectFit:"cover",borderRadius:"8px",border:"1px solid rgba(255,255,255,0.1)",display:"block",flexShrink:0},
   photoEmpty:    {width:"76px",height:"68px",background:"rgba(255,255,255,0.04)",borderRadius:"8px",border:"1px dashed rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",flexDirection:"column",gap:"2px"},
   photoActions:  {display:"flex",flexDirection:"column",gap:"8px"},
   uploadBtn:     {background:"rgba(232,82,10,0.12)",border:"1px solid rgba(232,82,10,0.3)",color:"#E8520A",padding:"8px 14px",fontSize:"12px",fontWeight:600,cursor:"pointer",borderRadius:"6px"},
@@ -574,27 +580,48 @@ const S = {
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; background:#0f0f0f; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; background:#0f0f0f; overflow-x:hidden; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .spinner { width:30px;height:30px;border:3px solid rgba(232,82,10,0.2);border-top-color:#E8520A;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto; }
+  input,button,textarea,select { font-family:inherit; }
   input:focus,select:focus,textarea:focus { border-color:rgba(232,82,10,0.5)!important;outline:none; }
-  button:hover:not(:disabled) { filter:brightness(1.1); }
+  button:hover:not(:disabled) { filter:brightness(1.08); }
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
   input[type=file] { display:none!important; }
-  textarea { font-family:'Inter',system-ui,sans-serif; }
+  textarea { resize:vertical; }
+  img { max-width:100%; display:block; }
+
+  /* Desktop table, mobile cards */
   .mobile-cards { display:none; }
-  .desktop-table { display:table; }
+  .desktop-table { display:table; width:100%; }
+
+  /* Header responsive */
+  .admin-hright { display:flex; align-items:center; gap:12px; }
+  .admin-burger { display:none; background:none; border:1px solid rgba(255,255,255,0.15); color:#f0f0f0; width:38px; height:38px; border-radius:6px; cursor:pointer; font-size:18px; align-items:center; justify-content:center; flex-shrink:0; }
+
+  /* Stats grid */
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:rgba(255,255,255,0.04); margin:16px; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden; }
+
+  /* Two col form */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  /* Mobile dropdown nav */
+  .mobile-dropdown { background:#1a1a1a; border-bottom:1px solid rgba(255,255,255,0.08); padding:8px 0; }
+  .mobile-dropdown button { display:block;width:100%;text-align:left;background:none;border:none;color:rgba(240,240,240,0.65);padding:12px 20px;font-size:14px;cursor:pointer; }
+  .mobile-dropdown span { display:block;padding:10px 20px;font-size:11px;color:rgba(240,240,240,0.3); }
+
   @media (max-width:768px) {
     .mobile-cards { display:block!important; }
     .desktop-table { display:none!important; }
-    div[style*="grid-template-columns: repeat(4"] { grid-template-columns:1fr 1fr!important; }
-    div[style*="gridTemplateColumns: 1fr 1fr"] { grid-template-columns:1fr!important; }
-    div[style*="display:flex"][style*="gap:12px"] { flex-direction:column; }
+    .stats-grid { grid-template-columns:1fr 1fr!important; margin:12px; }
+    .admin-hright { display:none!important; }
+    .admin-burger { display:flex!important; }
+    .two-col { grid-template-columns:1fr!important; }
   }
-  @media (max-width:640px) {
-    div[style*="logoMark"] { font-size:28px!important; }
-    button[style*="burger"] { display:block!important; }
-    div[style*="hRight"] { display:none!important; }
+
+  @media (max-width:480px) {
+    .stats-grid { grid-template-columns:1fr 1fr; }
   }
 `;
